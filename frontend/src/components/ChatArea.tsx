@@ -98,7 +98,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       <div className="glass border-b border-white/10 p-3 md:p-4 flex items-center justify-between">
         <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
           <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm md:text-base flex-shrink-0">
-            {chatName[0].toUpperCase()}
+            {chatName?.[0]?.toUpperCase() || 'C'}
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-white text-sm md:text-base truncate">{chatName}</h3>
@@ -130,12 +130,12 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               <div className={`flex gap-2 max-w-[85%] md:max-w-2xl ${isSent ? 'flex-row-reverse' : 'flex-row'}`}>
                 {!isSent && (
                   <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                    {message.senderName[0].toUpperCase()}
+                    {message.senderName?.[0]?.toUpperCase() || 'U'}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
                   {!isSent && (
-                    <p className="text-xs text-gray-400 mb-1 px-1">{message.senderName}</p>
+                    <p className="text-xs text-gray-400 mb-1 px-1">{message.senderName || 'Unknown'}</p>
                   )}
                   {message.type === 'code' ? (
                     <div className="rounded-xl overflow-hidden border border-white/10 overflow-x-auto">

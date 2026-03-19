@@ -409,10 +409,19 @@ io.on('connection', (socket) => {
       
       // Create room ID (always sort to ensure consistency)
       const roomId = [userId1, userId2].sort().join('-');
+      console.log('✅ Room ID created:', roomId);
+      
+      // Get user info
+      const user1 = userQueries.getById.get(userId1);
+      const user2 = userQueries.getById.get(userId2);
+      
+      console.log('👤 User 1:', user1?.username);
+      console.log('👤 User 2:', user2?.username);
       
       socket.emit('private-chat-started', { roomId, otherUserId: userId2 });
+      console.log('✅ Private chat started event emitted');
     } catch (error) {
-      console.error('Start private chat error:', error);
+      console.error('❌ Start private chat error:', error);
     }
   });
   
@@ -420,8 +429,26 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     
     try {
-      const messages = messageQueries.getByRoom.all(roomId);
+      const rawMessages = messageQueries.getByRoom.all(roomId);
+      
+      // Convert database format to frontend format
+      const messages = rawMessages.map(msg => ({
+        id: msg.id,
+        senderId: msg.sender_id,
+        senderName: msg.sender_name,
+        content: msg.content,
+        type: msg.type,
+        roomId: msg.room_id,
+        roomType: msg.room_type,
+        fileName: msg.file_name,
+        fileSize: msg.file_size,
+        fileData: msg.file_data,
+        language: msg.language,
+        timestamp: msg.created_at
+      }));
+      
       socket.emit('room-messages', { roomId, messages });
+      console.log(`✅ Sent ${messages.length} messages for room: ${roomId}`);
     } catch (error) {
       console.error('Get room messages error:', error);
     }

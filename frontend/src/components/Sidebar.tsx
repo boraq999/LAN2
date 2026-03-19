@@ -161,7 +161,10 @@ const Sidebar: React.FC<SidebarProps> = ({ chats, activeChat, onChatSelect, curr
                 {availableUsers.map((user) => (
                   <button
                     key={user.id}
-                    onClick={() => onStartPrivateChat?.(user.id)}
+                    onClick={() => {
+                      console.log('👆 Clicked on user:', user.username, '- ID:', user.id);
+                      onStartPrivateChat?.(user.id);
+                    }}
                     className="w-full p-2 rounded-lg flex items-center gap-3 hover:bg-white/5 transition-all"
                   >
                     <div className="relative">
