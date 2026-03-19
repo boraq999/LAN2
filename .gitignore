@@ -25,3 +25,8 @@ Thumbs.db
 # Uploads
 backend/uploads/*
 !backend/uploads/.gitkeep
+
+# Database
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
