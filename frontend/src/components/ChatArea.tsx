@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Smile, Mic, Phone, Video, MoreVertical, FileText, Users } from 'lucide-react';
+import { Send, Paperclip, Smile, Mic, Phone, Video, MoreVertical, FileText, Users, Download } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
@@ -44,6 +44,21 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const handleFileDownload = (fileData: string, fileName: string) => {
+    try {
+      // Create a link and trigger download
+      const link = document.createElement('a');
+      link.href = fileData;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Failed to download file');
+    }
+  };
 
   const handleSend = () => {
     if (inputValue.trim()) {
@@ -154,13 +169,22 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                       </SyntaxHighlighter>
                     </div>
                   ) : message.type === 'file' ? (
-                    <div className={`glass p-3 md:p-4 rounded-xl flex items-center gap-2 md:gap-3 ${isSent ? 'message-sent' : ''}`}>
-                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
-                        <FileText size={16} className="text-primary md:w-5 md:h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs md:text-sm font-medium truncate">{message.fileName}</p>
-                        <p className="text-xs text-gray-400">{formatFileSize(message.fileSize)}</p>
+                    <div className={`glass p-3 md:p-4 rounded-xl border border-white/10 ${isSent ? 'message-sent' : ''}`}>
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <FileText size={16} className="text-primary md:w-5 md:h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs md:text-sm font-medium truncate">{message.fileName}</p>
+                          <p className="text-xs text-gray-400">{formatFileSize(message.fileSize)}</p>
+                        </div>
+                        <button
+                          onClick={() => handleFileDownload(message.fileData || '', message.fileName || 'file')}
+                          className="p-2 hover:bg-primary/20 rounded-lg transition-colors flex-shrink-0"
+                          title="Download file"
+                        >
+                          <Download size={16} className="text-primary" />
+                        </button>
                       </div>
                     </div>
                   ) : (

@@ -3,26 +3,34 @@ echo ========================================
 echo   Reset Database
 echo ========================================
 echo.
-echo This will delete the database and create a new one.
-echo Default admin will be recreated: admin / admin123
+echo WARNING: This will delete ALL data!
+echo   - All users (except admin)
+echo   - All messages
+echo   - All groups
+echo   - All activity logs
 echo.
-pause
-
-cd backend
-
+echo Default admin will be recreated:
+echo   Username: admin
+echo   Password: admin123
 echo.
-echo [1/2] Deleting old database...
-if exist lan-chat.db (
-    del lan-chat.db
-    echo Database deleted.
-) else (
-    echo No database found.
+set /p confirm="Are you sure? (yes/no): "
+if /i not "%confirm%"=="yes" (
+    echo.
+    echo Cancelled.
+    pause
+    exit
 )
 
 echo.
-echo [2/2] Starting server to create new database...
-echo Press Ctrl+C to stop after you see "Database initialized successfully"
-echo.
-npm start
+echo Resetting database...
+cd backend
+node reset-database.js
 
+echo.
+echo ========================================
+echo   Done!
+echo ========================================
+echo.
+echo You can now run: start.bat
+echo.
 pause

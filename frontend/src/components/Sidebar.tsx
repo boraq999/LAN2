@@ -31,6 +31,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ chats, activeChat, onChatSelect, currentUser, onStartPrivateChat, onlineUsers = [] }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'direct' | 'groups'>('direct');
 
   // Separate chats into groups and private
   const groupChats = chats.filter(chat => chat.isGroup);
@@ -42,13 +43,15 @@ const Sidebar: React.FC<SidebarProps> = ({ chats, activeChat, onChatSelect, curr
     user => user.id !== currentUser?.id && !privateChatUserIds.includes(user.id)
   );
 
-  // Filter chats based on search
+  // Filter chats based on search and active tab
   const filteredGroupChats = groupChats.filter(chat => 
     chat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   const filteredPrivateChats = privateChats.filter(chat => 
     chat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const displayChats = activeTab === 'direct' ? filteredPrivateChats : filteredGroupChats;
 
   return (
     <>
@@ -103,131 +106,155 @@ const Sidebar: React.FC<SidebarProps> = ({ chats, activeChat, onChatSelect, curr
             className="w-full bg-dark-bg/50 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-colors"
           />
         </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={() => setActiveTab('direct')}
+            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'direct'
+                ? 'bg-primary/20 text-primary border border-primary/30'
+                : 'bg-dark-bg/50 text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <MessageCircle size={16} />
+            <span>Direct</span>
+            {privateChats.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 bg-primary/30 rounded-full text-xs">
+                {privateChats.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('groups')}
+            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'groups'
+                ? 'bg-primary/20 text-primary border border-primary/30'
+                : 'bg-dark-bg/50 text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Hash size={16} />
+            <span>Groups</span>
+            {groupChats.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 bg-primary/30 rounded-full text-xs">
+                {groupChats.length}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Chats List */}
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         <div className="p-2">
-          {/* Direct Messages Section */}
-          <div className="mb-4">
-            <div className="flex items-center gap-2 px-3 py-2">
-              <MessageCircle size={16} className="text-gray-400" />
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Direct Messages
-              </h3>
-            </div>
-            
-            {filteredPrivateChats.length > 0 ? (
-              filteredPrivateChats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={() => onChatSelect(chat.id)}
-                  className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all mb-1 ${
-                    activeChat === chat.id
-                      ? 'bg-primary/20 border border-primary/30'
-                      : 'hover:bg-white/5'
-                  }`}
-                >
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                      {chat.name[0].toUpperCase()}
-                    </div>
-                    {chat.isOnline && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-dark-card"></div>
-                    )}
-                  </div>
-                  <div className="flex-1 text-left overflow-hidden">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-semibold text-white text-sm truncate">{chat.name}</h4>
-                      <span className="text-xs text-gray-400">{chat.timestamp}</span>
-                    </div>
-                    <p className="text-xs text-gray-400 truncate">{chat.lastMessage}</p>
-                  </div>
-                  {chat.unread && (
-                    <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center text-xs font-semibold text-white">
-                      {chat.unread}
-                    </div>
-                  )}
-                </button>
-              ))
-            ) : (
-              <p className="text-xs text-gray-500 px-3 py-2">No direct messages yet</p>
-            )}
-            
-            {/* Available users to start chat */}
-            {availableUsers.length > 0 && (
-              <div className="mt-2">
-                <p className="text-xs text-gray-500 px-3 py-1">Start a chat:</p>
-                {availableUsers.map((user) => (
+          {activeTab === 'direct' ? (
+            // Direct Messages Tab
+            <>
+              {filteredPrivateChats.length > 0 ? (
+                filteredPrivateChats.map((chat) => (
                   <button
-                    key={user.id}
-                    onClick={() => {
-                      console.log('👆 Clicked on user:', user.username, '- ID:', user.id);
-                      onStartPrivateChat?.(user.id);
-                    }}
-                    className="w-full p-2 rounded-lg flex items-center gap-3 hover:bg-white/5 transition-all"
+                    key={chat.id}
+                    onClick={() => onChatSelect(chat.id)}
+                    className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all mb-1 ${
+                      activeChat === chat.id
+                        ? 'bg-primary/20 border border-primary/30'
+                        : 'hover:bg-white/5'
+                    }`}
                   >
                     <div className="relative">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center text-white text-sm font-semibold">
-                        {user.username[0].toUpperCase()}
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                        {chat.name[0].toUpperCase()}
                       </div>
-                      {user.status === 'online' && (
-                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success rounded-full border-2 border-dark-card"></div>
+                      {chat.isOnline && (
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-dark-card"></div>
                       )}
                     </div>
-                    <div className="flex-1 text-left">
-                      <h4 className="text-sm text-white">{user.username}</h4>
-                      <p className="text-xs text-gray-400">Click to chat</p>
+                    <div className="flex-1 text-left overflow-hidden">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-semibold text-white text-sm truncate">{chat.name}</h4>
+                        <span className="text-xs text-gray-400">{chat.timestamp}</span>
+                      </div>
+                      <p className="text-xs text-gray-400 truncate">{chat.lastMessage}</p>
                     </div>
+                    {chat.unread && (
+                      <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center text-xs font-semibold text-white">
+                        {chat.unread}
+                      </div>
+                    )}
                   </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Groups Section */}
-          <div>
-            <div className="flex items-center gap-2 px-3 py-2">
-              <Hash size={16} className="text-gray-400" />
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Groups
-              </h3>
-            </div>
-            
-            {filteredGroupChats.length > 0 ? (
-              filteredGroupChats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={() => onChatSelect(chat.id)}
-                  className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all mb-1 ${
-                    activeChat === chat.id
-                      ? 'bg-primary/20 border border-primary/30'
-                      : 'hover:bg-white/5'
-                  }`}
-                >
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white">
-                      <Users size={20} />
+                ))
+              ) : (
+                <p className="text-xs text-gray-500 px-3 py-2 text-center">No direct messages yet</p>
+              )}
+              
+              {/* Available users to start chat */}
+              {availableUsers.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs text-gray-400 px-3 py-2 font-medium">Start a chat:</p>
+                  {availableUsers.map((user) => (
+                    <button
+                      key={user.id}
+                      onClick={() => {
+                        console.log('👆 Clicked on user:', user.username, '- ID:', user.id);
+                        onStartPrivateChat?.(user.id);
+                      }}
+                      className="w-full p-2 rounded-lg flex items-center gap-3 hover:bg-white/5 transition-all"
+                    >
+                      <div className="relative">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center text-white text-sm font-semibold">
+                          {user.username[0].toUpperCase()}
+                        </div>
+                        {user.status === 'online' && (
+                          <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success rounded-full border-2 border-dark-card"></div>
+                        )}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <h4 className="text-sm text-white">{user.username}</h4>
+                        <p className="text-xs text-gray-400">Click to chat</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            // Groups Tab
+            <>
+              {filteredGroupChats.length > 0 ? (
+                filteredGroupChats.map((chat) => (
+                  <button
+                    key={chat.id}
+                    onClick={() => onChatSelect(chat.id)}
+                    className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all mb-1 ${
+                      activeChat === chat.id
+                        ? 'bg-primary/20 border border-primary/30'
+                        : 'hover:bg-white/5'
+                    }`}
+                  >
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white">
+                        <Users size={20} />
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex-1 text-left overflow-hidden">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-semibold text-white text-sm truncate">{chat.name}</h4>
-                      <span className="text-xs text-gray-400">{chat.timestamp}</span>
+                    <div className="flex-1 text-left overflow-hidden">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-semibold text-white text-sm truncate">{chat.name}</h4>
+                        <span className="text-xs text-gray-400">{chat.timestamp}</span>
+                      </div>
+                      <p className="text-xs text-gray-400 truncate">{chat.lastMessage}</p>
                     </div>
-                    <p className="text-xs text-gray-400 truncate">{chat.lastMessage}</p>
-                  </div>
-                  {chat.unread && (
-                    <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center text-xs font-semibold text-white">
-                      {chat.unread}
-                    </div>
-                  )}
-                </button>
-              ))
-            ) : (
-              <p className="text-xs text-gray-500 px-3 py-2">No groups yet</p>
-            )}
-          </div>
+                    {chat.unread && (
+                      <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center text-xs font-semibold text-white">
+                        {chat.unread}
+                      </div>
+                    )}
+                  </button>
+                ))
+              ) : (
+                <p className="text-xs text-gray-500 px-3 py-2 text-center">No groups yet</p>
+              )}
+            </>
+          )}
         </div>
       </div>
 
