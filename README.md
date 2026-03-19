@@ -1,207 +1,235 @@
 # 🚀 LAN Chat - Local Network Messenger
 
-A modern, real-time chat application for local networks with support for text messages, code sharing, and file transfers. Built with professional UI/UX standards inspired by Apple HIG and Material Design 3.
+تطبيق محادثة احترافي للشبكات المحلية مع دعم الدردشات الخاصة والجماعية.
 
-## ✨ Features
+---
 
-### Core Functionality
-- 🌐 **Local Network Communication**: Automatic peer discovery on LAN
-- 💬 **Real-time Messaging**: Instant message delivery using WebSocket
-- 📁 **File Sharing**: Send and receive files up to 50MB
-- 💻 **Code Sharing**: Syntax-highlighted code blocks with language detection
-- 👥 **Group Chats**: Create and manage group conversations
-- 🟢 **Online Status**: Real-time presence indicators
+## ✨ المميزات
 
-### UI/UX Features
-- 🎨 **Glassmorphism Design**: Modern frosted glass effects
-- 🌙 **Dark Theme**: Eye-friendly dark interface
-- 📱 **Responsive Layout**: Mobile-first design approach
-- ⚡ **Smooth Animations**: Fluid transitions and interactions
-- 🎯 **Visual Hierarchy**: Clear information architecture
-- ♿ **Accessibility**: WCAG compliant components
+### 💬 نظام الدردشات:
+- **دردشات خاصة (1-to-1)**: محادثات خاصة بين شخصين فقط
+- **دردشات جماعية**: مجموعات للمحادثات الجماعية
+- **رسائل نصية**: إرسال واستقبال فوري
+- **مشاركة ملفات**: حتى 50MB
+- **مشاركة كود**: مع syntax highlighting
 
-## 🛠️ Tech Stack
+### 👨‍💼 لوحة تحكم Admin:
+- إنشاء وإدارة المستخدمين
+- إنشاء وإدارة المجموعات
+- تعطيل/تفعيل المستخدمين
+- سجل النشاطات الكامل
+- إعدادات النظام
 
-### Frontend
-- **React 18** + **TypeScript**: Type-safe component architecture
-- **Tailwind CSS**: Utility-first styling with custom design system
-- **Socket.io Client**: Real-time WebSocket communication
-- **Lucide React**: Modern icon library
-- **React Syntax Highlighter**: Code block rendering with Prism
+### 💾 قاعدة البيانات:
+- SQLite - لا تحتاج خادم منفصل
+- حفظ دائم للبيانات
+- سجل كامل للمحادثات
 
-### Backend
-- **Node.js** + **Express**: Server framework
-- **Socket.io**: WebSocket server for real-time events
-- **Multer**: File upload handling
-- **CORS**: Cross-origin resource sharing
+---
 
-## 📦 Installation
+## 📦 التثبيت
 
-### Prerequisites
-- Node.js 18+ and npm/yarn
-- Network access (same LAN for all users)
+### المتطلبات:
+- Node.js 18+
+- npm
 
-### Step 1: Install Backend Dependencies
+### التثبيت السريع:
 ```bash
-cd backend
-npm install
+install.bat
 ```
 
-### Step 2: Install Frontend Dependencies
+---
+
+## 🚀 التشغيل
+
+### الطريقة السريعة:
 ```bash
-cd frontend
-npm install
+start.bat
 ```
 
-## 🚀 Running the Application
+### الطريقة اليدوية:
 
-### Start Backend Server
+**Backend:**
 ```bash
 cd backend
 npm start
 ```
-Server will run on `http://0.0.0.0:3001`
 
-### Start Frontend Development Server
+**Frontend:**
 ```bash
 cd frontend
 npm run dev
 ```
-Frontend will run on `http://localhost:5173`
-
-### Access from Other Devices on LAN
-1. Find your computer's local IP address:
-   - Windows: `ipconfig` (look for IPv4 Address)
-   - Mac/Linux: `ifconfig` or `ip addr`
-2. On other devices, navigate to: `http://YOUR_IP:5173`
-3. Backend should be accessible at: `http://YOUR_IP:3001`
-
-## 🎨 Design System
-
-### Color Palette
-```css
-Primary (Accent):    #5b68f5 (Blue/Purple)
-Background:          #1a1d29 (Dark Navy)
-Cards/Panels:        #252836 (Lighter Navy)
-Success (Online):    #4ade80 (Green)
-Text Primary:        #e5e7eb (Light Gray)
-Text Secondary:      #9ca3af (Medium Gray)
-```
-
-### Typography
-- **Font Family**: Inter, SF Pro Display, system-ui
-- **Heading 1**: 24px / 600 weight
-- **Body**: 14px / 400 weight
-- **Code**: Fira Code, monospace
-
-### Spacing System
-- xs: 4px | sm: 8px | md: 16px | lg: 24px | xl: 32px
-- Border Radius: 12px (cards), 8px (buttons), 20px (pills)
-
-## 📱 Usage Guide
-
-### First Time Setup
-1. Open the application in your browser
-2. Enter your name in the welcome modal
-3. Click "Join Network" to connect
-
-### Sending Messages
-- Type in the input field at the bottom
-- Press Enter or click Send button
-- Shift+Enter for new line
-
-### Sharing Code
-1. Click the `{}` button to enable Code Mode
-2. Paste or type your code
-3. Language will be auto-detected
-4. Send with syntax highlighting
-
-### Sending Files
-1. Click the paperclip icon
-2. Select a file (max 50MB)
-3. File will be sent with preview
-
-### Creating Group Chats
-- Groups are automatically created
-- "Team Apollo" is the default group for all users
-
-## 🔧 Configuration
-
-### Backend Port (server.js)
-```javascript
-const PORT = process.env.PORT || 3001;
-```
-
-### Frontend Socket URL (App.tsx)
-```typescript
-const SOCKET_URL = 'http://localhost:3001';
-```
-Change to your server IP for LAN access: `http://YOUR_IP:3001`
-
-### File Upload Limit (server.js)
-```javascript
-maxHttpBufferSize: 50e6 // 50MB
-```
-
-## 🏗️ Project Structure
-
-```
-lan-chat-app/
-├── backend/
-│   ├── server.js           # Socket.io server
-│   ├── package.json
-│   └── uploads/            # File storage
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Sidebar.tsx      # Chat list
-│   │   │   ├── ChatArea.tsx     # Main chat
-│   │   │   ├── InfoPanel.tsx    # Group info
-│   │   │   └── LoginModal.tsx   # User login
-│   │   ├── App.tsx              # Main app
-│   │   └── index.css            # Global styles
-│   ├── package.json
-│   └── tailwind.config.js
-└── README.md
-```
-
-## 🎯 UX Principles Applied
-
-1. **User Flow Optimization**: Minimal steps from login to messaging
-2. **Visual Hierarchy**: Clear distinction between UI elements
-3. **Feedback**: Real-time typing indicators and message status
-4. **Consistency**: Unified design language across components
-5. **Accessibility**: Keyboard navigation and ARIA labels
-6. **Performance**: Optimized rendering and lazy loading
-
-## 🔐 Security Notes
-
-- This is a LOCAL NETWORK application
-- No encryption by default (add TLS for production)
-- Files are stored on the server temporarily
-- No authentication system (add for production use)
-
-## 🚧 Future Enhancements
-
-- [ ] End-to-end encryption
-- [ ] Voice/Video calls
-- [ ] Screen sharing
-- [ ] Message reactions
-- [ ] Search functionality
-- [ ] Message editing/deletion
-- [ ] User profiles with avatars
-- [ ] Custom themes
-- [ ] Desktop notifications
-- [ ] Electron wrapper for desktop app
-
-## 📄 License
-
-MIT License - Feel free to use and modify
-
-## 🤝 Contributing
-
-This is a demonstration project. Feel free to fork and enhance!
 
 ---
 
-**Built with ❤️ following Apple HIG and Material Design 3 principles**
+## 🔐 بيانات الدخول الافتراضية
+
+### Admin:
+```
+Username: admin
+Password: admin123
+```
+
+### المستخدمين:
+يتم إنشاؤهم من Admin Panel فقط.
+
+---
+
+## 🌐 الوصول للتطبيق
+
+### على نفس الجهاز:
+- **المحادثة**: `http://localhost:5173`
+- **Admin Panel**: `http://localhost:5173/admin`
+
+### من أجهزة أخرى على الشبكة:
+1. اعرف IP جهازك: `ipconfig`
+2. على الأجهزة الأخرى:
+   - **المحادثة**: `http://YOUR_IP:5173`
+   - **Admin Panel**: `http://YOUR_IP:5173/admin`
+
+---
+
+## 🛠️ أدوات مساعدة
+
+### إنشاء مستخدم تجريبي:
+```bash
+create-test-user.bat
+```
+ينشئ مستخدم: `test` / `test123`
+
+### تحديث قاعدة البيانات:
+```bash
+update-database.bat
+```
+
+### إصلاح الرسائل القديمة:
+```bash
+fix-messages.bat
+```
+
+### إعادة تعيين قاعدة البيانات:
+```bash
+reset-database.bat
+```
+
+---
+
+## 📁 هيكل المشروع
+
+```
+LAN2/
+├── backend/              # Backend Server
+│   ├── server.js        # السيرفر الرئيسي
+│   ├── database.js      # إعدادات قاعدة البيانات
+│   └── lan-chat.db      # ملف قاعدة البيانات
+│
+├── frontend/            # Frontend Application
+│   └── src/
+│       ├── components/  # مكونات الواجهة
+│       ├── pages/       # الصفحات
+│       └── App.tsx      # التطبيق الرئيسي
+│
+├── docs/                # التوثيق والأدلة
+│
+├── install.bat          # تثبيت المكتبات
+├── start.bat            # تشغيل التطبيق
+├── README.md            # هذا الملف
+└── README_AR.md         # الدليل بالعربية
+```
+
+---
+
+## 📚 التوثيق
+
+جميع ملفات التوثيق موجودة في مجلد `docs/`:
+
+- **TROUBLESHOOTING.md**: حل المشاكل الشائعة
+- **TESTING_GUIDE.md**: دليل الاختبار
+- **PROJECT_STATUS.md**: حالة المشروع التقنية
+- والمزيد...
+
+---
+
+## 🎯 الاستخدام السريع
+
+### 1. التثبيت:
+```bash
+install.bat
+```
+
+### 2. التشغيل:
+```bash
+start.bat
+```
+
+### 3. إنشاء مستخدم:
+- افتح: `http://localhost:5173/admin`
+- سجل دخول: `admin` / `admin123`
+- اضغط "Add User"
+- أنشئ مستخدم جديد
+
+### 4. بدء المحادثة:
+- افتح: `http://localhost:5173`
+- سجل دخول بالمستخدم الجديد
+- ابدأ محادثة!
+
+---
+
+## 🔧 حل المشاكل
+
+### مشكلة في قاعدة البيانات:
+```bash
+update-database.bat
+```
+
+### مشكلة في الرسائل:
+```bash
+fix-messages.bat
+```
+
+### إعادة تعيين كاملة:
+```bash
+reset-database.bat
+```
+
+للمزيد: راجع `docs/TROUBLESHOOTING.md`
+
+---
+
+## 🎨 التصميم
+
+- **Glassmorphism**: تأثيرات زجاجية حديثة
+- **Dark Theme**: واجهة داكنة مريحة للعين
+- **Responsive**: يعمل على جميع الأجهزة
+- **Apple HIG & Material Design 3**: معايير تصميم احترافية
+
+---
+
+## 🔐 الأمان
+
+### الحالي:
+- ✅ تشفير كلمات المرور (SHA-256)
+- ✅ نظام صلاحيات
+- ✅ سجل نشاطات
+
+### للإنتاج:
+- 🔒 أضف HTTPS/TLS
+- 🔒 أضف JWT tokens
+- 🔒 أضف rate limiting
+
+---
+
+## 📄 الترخيص
+
+MIT License
+
+---
+
+## 🤝 المساهمة
+
+هذا مشروع تعليمي. لا تتردد في استخدامه وتطويره!
+
+---
+
+**صُنع بـ ❤️ - جاهز للاستخدام الفوري!**
