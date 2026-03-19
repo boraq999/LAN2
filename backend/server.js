@@ -33,9 +33,22 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Store connected users
+// Store connected users with roles
 const users = new Map();
 const rooms = new Map();
+const adminCredentials = { username: 'admin', password: 'admin123' };
+
+// Admin data storage
+const adminData = {
+  users: [],
+  groups: [],
+  settings: {
+    allowRegistration: true,
+    fileSharing: true,
+    codeSharing: true,
+    maxFileSize: 50
+  }
+};
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
@@ -46,8 +59,22 @@ io.on('connection', (socket) => {
       id: socket.id,
       username: userData.username,
       avatar: userData.avatar,
-      status: 'online'
+      status: 'online',
+      role: userData.role || 'user',
+      joinedAt: new Date().toISOString(),
+      lastActive: new Date().toISOString()
     });
+    
+    // Add to admin data
+    adminData.users.push({
+      id: socket.id,
+      username: userData.username,
+      status: 'active',
+      role: userData.role || 'user',
+      joinedAt: new Date().toISOString(),
+      lastActive: new Date().toISOString()
+    });
+    
     io.emit('users-update', Array.from(users.values()));
   });
 
@@ -104,9 +131,79 @@ io.on('connection', (socket) => {
 
   // Disconnect
   socket.on('disconnect', () => {
+    const user = users.get(socket.id);
+    if (user) {
+      // Update admin data
+      const userIndex = adminData.users.findIndex(u => u.id === socket.id);
+      if (userIndex !== -1) {
+        adminData.users[userIndex].lastActive = new Date().toISOString();
+      }
+    }
     users.delete(socket.id);
     io.emit('users-update', Array.from(users.values()));
     console.log('User disconnected:', socket.id);
+  });
+
+  // Admin: Get users list
+  socket.on('admin:get-users', () => {
+    socket.emit('admin:users-list', adminData.users);
+  });
+
+  // Admin: Get groups list
+  socket.on('admin:get-groups', () => {
+    socket.emit('admin:groups-list', adminData.groups);
+  });
+
+  // Admin: Suspend user
+  socket.on('admin:suspend-user', (data) => {
+    const userIndex = adminData.users.findIndex(u => u.id === data.userId);
+    if (userIndex !== -1) {
+      adminData.users[userIndex].status = 
+        adminData.users[userIndex].status === 'active' ? 'suspended' : 'active';
+      io.emit('admin:users-list', adminData.users);
+      
+      // Disconnect suspended user
+      if (adminData.users[userIndex].status === 'suspended') {
+        io.to(data.userId).emit('user-suspended');
+      }
+    }
+  });
+
+  // Admin: Delete user
+  socket.on('admin:delete-user', (data) => {
+    adminData.users = adminData.users.filter(u => u.id !== data.userId);
+    io.emit('admin:users-list', adminData.users);
+    io.to(data.userId).emit('user-deleted');
+  });
+
+  // Admin: Suspend group
+  socket.on('admin:suspend-group', (data) => {
+    const groupIndex = adminData.groups.findIndex(g => g.id === data.groupId);
+    if (groupIndex !== -1) {
+      adminData.groups[groupIndex].status = 
+        adminData.groups[groupIndex].status === 'active' ? 'suspended' : 'active';
+      io.emit('admin:groups-list', adminData.groups);
+    }
+  });
+
+  // Admin: Delete group
+  socket.on('admin:delete-group', (data) => {
+    adminData.groups = adminData.groups.filter(g => g.id !== data.groupId);
+    io.emit('admin:groups-list', adminData.groups);
+  });
+
+  // Admin: Create group
+  socket.on('admin:create-group', (data) => {
+    const newGroup = {
+      id: 'group-' + Date.now(),
+      name: data.name,
+      members: data.members || [],
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      createdBy: socket.id
+    };
+    adminData.groups.push(newGroup);
+    io.emit('admin:groups-list', adminData.groups);
   });
 });
 

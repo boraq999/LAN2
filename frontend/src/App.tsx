@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import InfoPanel from './components/InfoPanel';
 import LoginModal from './components/LoginModal';
+import AdminAccessButton from './components/AdminAccessButton';
 
 interface User {
   id: string;
@@ -217,6 +218,8 @@ function App() {
         isOpen={showInfoPanel && activeChat !== null}
         onClose={() => setShowInfoPanel(false)}
       />
+
+      <AdminAccessButton />
     </div>
   );
 }
