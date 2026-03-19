@@ -48,7 +48,7 @@ function App() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<{ [key: string]: Message[] }>({});
-  const [showInfoPanel, setShowInfoPanel] = useState(true);
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -190,7 +190,7 @@ function App() {
   ];
 
   return (
-    <div className="h-screen flex overflow-hidden">
+    <div className="h-screen flex overflow-hidden relative">
       {!isLoggedIn && <LoginModal onLogin={handleLogin} />}
 
       <Sidebar
@@ -208,6 +208,7 @@ function App() {
         onSendMessage={handleSendMessage}
         onSendFile={handleSendFile}
         onTyping={handleTyping}
+        onToggleInfo={() => setShowInfoPanel(!showInfoPanel)}
       />
 
       <InfoPanel

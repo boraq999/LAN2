@@ -1,5 +1,5 @@
-import React from 'react';
-import { Search, Users, Bell, Settings } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Users, Bell, Settings, Menu, X } from 'lucide-react';
 
 interface User {
   id: string;
@@ -27,8 +27,33 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ chats, activeChat, onChatSelect, currentUser }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <div className="w-80 glass border-r border-white/10 flex flex-col h-screen">
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-3 glass rounded-xl"
+      >
+        {isOpen ? <X size={24} className="text-white" /> : <Menu size={24} className="text-white" />}
+      </button>
+
+      {/* Overlay for mobile */}
+      {isOpen && (
+        <div
+          onClick={() => setIsOpen(false)}
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={`
+        w-80 glass border-r border-white/10 flex flex-col h-screen
+        fixed lg:relative z-40
+        transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
       {/* Header */}
       <div className="p-4 border-b border-white/10">
         <div className="flex items-center justify-between mb-4">
@@ -111,7 +136,8 @@ const Sidebar: React.FC<SidebarProps> = ({ chats, activeChat, onChatSelect, curr
           </span>
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

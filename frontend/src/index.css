@@ -32,7 +32,7 @@
   }
 
   .message-bubble {
-    @apply px-4 py-2 rounded-2xl max-w-md break-words;
+    @apply px-3 py-2 md:px-4 md:py-2 rounded-2xl max-w-md break-words;
   }
 
   .message-sent {

@@ -15,10 +15,23 @@ interface InfoPanelProps {
 }
 
 const InfoPanel: React.FC<InfoPanelProps> = ({ chatName, members, isOpen, onClose }) => {
-  if (!isOpen) return null;
-
   return (
-    <div className="w-80 glass border-l border-white/10 flex flex-col h-screen">
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div
+          onClick={onClose}
+          className="xl:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+        />
+      )}
+
+      {/* Info Panel */}
+      <div className={`
+        w-80 glass border-l border-white/10 flex flex-col h-screen
+        fixed xl:relative right-0 z-40
+        transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'}
+      `}>
       {/* Header */}
       <div className="p-4 border-b border-white/10 flex items-center justify-between">
         <h3 className="font-semibold text-white">Group Info</h3>
@@ -33,9 +46,9 @@ const InfoPanel: React.FC<InfoPanelProps> = ({ chatName, members, isOpen, onClos
       {/* Group Avatar & Name */}
       <div className="p-6 text-center border-b border-white/10">
         <div className="w-24 h-24 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
-          <span className="text-3xl text-white font-bold">{chatName[0].toUpperCase()}</span>
+          <span className="text-3xl text-white font-bold">{chatName?.[0]?.toUpperCase() || 'G'}</span>
         </div>
-        <h2 className="text-xl font-semibold text-white mb-1">{chatName}</h2>
+        <h2 className="text-xl font-semibold text-white mb-1">{chatName || 'Group'}</h2>
         <p className="text-sm text-gray-400">{members.length} members</p>
       </div>
 
@@ -91,7 +104,8 @@ const InfoPanel: React.FC<InfoPanelProps> = ({ chatName, members, isOpen, onClos
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
