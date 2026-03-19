@@ -47,10 +47,13 @@ function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [chats, setChats] = useState<Chat[]>([]);
+  const [privateChats, setPrivateChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
+  const [activeChatType, setActiveChatType] = useState<'private' | 'group'>('group');
   const [messages, setMessages] = useState<{ [key: string]: Message[] }>({});
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginError, setLoginError] = useState('');
 
   useEffect(() => {
     const newSocket = io(SOCKET_URL, {
@@ -65,9 +68,70 @@ function App() {
       console.log('Connected to server');
     });
 
-    newSocket.on('users-update', (updatedUsers: User[]) => {
+    newSocket.on('user:login-success', (userData) => {
+      setCurrentUser({
+        id: userData.id,
+        username: userData.username,
+        avatar: userData.avatar || '',
+        status: 'online'
+      });
+      setIsLoggedIn(true);
+      setLoginError('');
+    });
+
+    newSocket.on('user:login-error', (error) => {
+      setLoginError(error.message);
+      setIsLoggedIn(false);
+    });
+
+    newSocket.on('user-suspended', () => {
+      alert('Your account has been suspended by admin');
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+    });
+
+    newSocket.on('user-deleted', () => {
+      alert('Your account has been deleted by admin');
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+    });
+
+    newSocket.on('users:online', (updatedUsers: User[]) => {
       setUsers(updatedUsers);
-      updateChatsFromUsers(updatedUsers);
+    });
+
+    newSocket.on('groups-list', (groupsList: any[]) => {
+      const groupChats = groupsList
+        .filter(g => g.status === 'active')
+        .map(g => ({
+          id: g.id,
+          name: g.name,
+          avatar: '',
+          lastMessage: 'Group chat',
+          timestamp: 'Now',
+          isGroup: true,
+          isOnline: true
+        }));
+      setChats(groupChats);
+    });
+
+    newSocket.on('private-chats-list', (privateChatsData: any[]) => {
+      const privateChatsList = privateChatsData.map(chat => ({
+        id: chat.roomId,
+        name: chat.username,
+        avatar: chat.avatar,
+        lastMessage: 'Start chatting',
+        timestamp: 'Now',
+        isGroup: false,
+        isOnline: chat.status === 'online'
+      }));
+      setPrivateChats(privateChatsList);
+    });
+
+    newSocket.on('private-chat-started', (data: any) => {
+      setActiveChat(data.roomId);
+      setActiveChatType('private');
+      newSocket.emit('join-room', data.roomId);
     });
 
     newSocket.on('receive-message', (message: Message) => {
@@ -76,9 +140,9 @@ function App() {
         [message.roomId]: [...(prev[message.roomId] || []), message],
       }));
 
-      // Update last message in chat list
-      setChats((prev) =>
-        prev.map((chat) =>
+      // Update last message in chats
+      const updateChatsList = (chatsList: Chat[]) => 
+        chatsList.map((chat) =>
           chat.id === message.roomId
             ? {
                 ...chat,
@@ -89,8 +153,17 @@ function App() {
                 }),
               }
             : chat
-        )
-      );
+        );
+
+      setChats(updateChatsList);
+      setPrivateChats(updateChatsList);
+    });
+
+    newSocket.on('room-messages', (data) => {
+      setMessages((prev) => ({
+        ...prev,
+        [data.roomId]: data.messages || []
+      }));
     });
 
     return () => {
@@ -98,54 +171,49 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (socket && isLoggedIn && currentUser) {
+      socket.emit('get-groups');
+      socket.emit('get-private-chats', { userId: currentUser.id });
+    }
+  }, [socket, isLoggedIn, currentUser]);
+
   const updateChatsFromUsers = (updatedUsers: User[]) => {
-    const newChats: Chat[] = updatedUsers
-      .filter((user) => user.id !== currentUser?.id)
-      .map((user) => ({
-        id: user.id,
-        name: user.username,
-        avatar: user.avatar,
-        lastMessage: 'Start a conversation',
-        timestamp: 'Now',
-        isOnline: user.status === 'online',
-      }));
-
-    // Add a default group chat
-    const groupChat: Chat = {
-      id: 'group-main',
-      name: 'Team Apollo',
-      avatar: '',
-      lastMessage: 'Welcome to the group!',
-      timestamp: 'Now',
-      isGroup: true,
-      isOnline: true,
-    };
-
-    setChats([groupChat, ...newChats]);
+    // This function is no longer needed as we handle private chats separately
   };
 
-  const handleLogin = (username: string) => {
-    const user: User = {
-      id: '',
-      username,
-      avatar: '',
-      status: 'online',
-    };
-    setCurrentUser(user);
-    setIsLoggedIn(true);
+  const handleStartPrivateChat = (userId: string) => {
+    if (socket && currentUser) {
+      const roomId = [currentUser.id, userId].sort().join('-');
+      
+      // Check if chat already exists
+      const existingChat = privateChats.find(chat => chat.id === roomId);
+      if (existingChat) {
+        setActiveChat(roomId);
+        setActiveChatType('private');
+        socket.emit('join-room', roomId);
+      } else {
+        // Start new private chat
+        socket.emit('start-private-chat', { userId1: currentUser.id, userId2: userId });
+      }
+    }
+  };
 
+  const handleLogin = (username: string, password: string) => {
     if (socket) {
-      socket.emit('register', { username, avatar: '' });
+      socket.emit('user:login', { username, password });
     }
   };
 
   const handleChatSelect = (chatId: string) => {
     setActiveChat(chatId);
+    
+    // Determine if it's a private or group chat
+    const isPrivate = chatId.includes('-');
+    setActiveChatType(isPrivate ? 'private' : 'group');
+    
     if (socket) {
       socket.emit('join-room', chatId);
-    }
-    if (!messages[chatId]) {
-      setMessages((prev) => ({ ...prev, [chatId]: [] }));
     }
   };
 
@@ -156,6 +224,7 @@ function App() {
       content,
       type,
       roomId: activeChat,
+      roomType: activeChatType,
     });
   };
 
@@ -169,6 +238,7 @@ function App() {
         fileSize: file.size,
         fileData: reader.result,
         roomId: activeChat,
+        roomType: activeChatType,
       });
     };
     reader.readAsDataURL(file);
@@ -179,8 +249,11 @@ function App() {
     socket.emit('typing', { roomId: activeChat, isTyping });
   };
 
-  const activeChatData = chats.find((chat) => chat.id === activeChat);
+  const activeChatData = [...chats, ...privateChats].find((chat) => chat.id === activeChat);
   const activeMessages = activeChat ? messages[activeChat] || [] : [];
+
+  // Combine all chats for sidebar
+  const allChats = [...privateChats, ...chats];
 
   const members = [
     { id: '1', name: 'Aisha', status: 'online' as const },
@@ -192,13 +265,23 @@ function App() {
 
   return (
     <div className="h-screen flex overflow-hidden relative">
-      {!isLoggedIn && <LoginModal onLogin={handleLogin} />}
+      {!isLoggedIn && (
+        <LoginModal onLogin={handleLogin} />
+      )}
+      
+      {loginError && (
+        <div className="fixed top-4 right-4 bg-error/90 text-white px-4 py-3 rounded-xl z-50">
+          {loginError}
+        </div>
+      )}
 
       <Sidebar
-        chats={chats}
+        chats={allChats}
         activeChat={activeChat}
         onChatSelect={handleChatSelect}
         currentUser={currentUser}
+        onStartPrivateChat={handleStartPrivateChat}
+        onlineUsers={users}
       />
 
       <ChatArea

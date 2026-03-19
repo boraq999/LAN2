@@ -20,21 +20,37 @@ function AdminPage() {
       reconnectionDelay: 1000,
       reconnectionAttempts: 5
     });
+
+    newSocket.on('connect', () => {
+      console.log('Admin socket connected');
+    });
+
+    newSocket.on('admin:login-success', (data) => {
+      console.log('Admin login success:', data);
+      setIsAuthenticated(true);
+    });
+
+    newSocket.on('admin:login-error', (error) => {
+      console.error('Admin login error:', error);
+      alert(error.message || 'Invalid admin credentials');
+    });
+
     setSocket(newSocket);
 
     return () => {
+      newSocket.off('admin:login-success');
+      newSocket.off('admin:login-error');
       newSocket.close();
     };
   }, []);
 
   const handleAdminLogin = (username: string, password: string) => {
-    if (username === 'admin' && password === 'admin123') {
-      setIsAuthenticated(true);
-      if (socket) {
-        socket.emit('register', { username: 'Administrator', avatar: '', role: 'admin' });
-      }
+    console.log('Attempting admin login:', username);
+    if (socket && socket.connected) {
+      socket.emit('admin:login', { username, password });
     } else {
-      alert('Invalid credentials');
+      console.error('Socket not connected');
+      alert('Connection error. Please refresh the page.');
     }
   };
 

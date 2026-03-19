@@ -1,5 +1,11 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const crypto = require('crypto');
+
+// Hash password function
+const hashPassword = (password) => {
+  return crypto.createHash('sha256').update(password).digest('hex');
+};
 
 // Create database file
 const dbPath = path.join(__dirname, 'lan-chat.db');
@@ -14,10 +20,12 @@ const initDB = () => {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
-      username TEXT NOT NULL,
+      username TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL,
       avatar TEXT,
       status TEXT DEFAULT 'active',
       role TEXT DEFAULT 'user',
+      created_by TEXT,
       joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_active DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -54,6 +62,7 @@ const initDB = () => {
       sender_id TEXT NOT NULL,
       sender_name TEXT NOT NULL,
       room_id TEXT NOT NULL,
+      room_type TEXT DEFAULT 'group',
       content TEXT,
       type TEXT DEFAULT 'text',
       file_name TEXT,
@@ -98,10 +107,10 @@ const initDB = () => {
 
   // Create default admin user
   const insertAdmin = db.prepare(`
-    INSERT OR IGNORE INTO users (id, username, role, status) 
-    VALUES ('admin', 'Administrator', 'admin', 'active')
+    INSERT OR IGNORE INTO users (id, username, password, role, status) 
+    VALUES ('admin', 'admin', ?, 'admin', 'active')
   `);
-  insertAdmin.run();
+  insertAdmin.run(hashPassword('admin123'));
 
   // Create default group
   const insertGroup = db.prepare(`
@@ -119,20 +128,35 @@ initDB();
 // Export database instance and prepared statements
 module.exports = {
   db,
+  hashPassword,
   
   // User queries
   users: {
     create: db.prepare(`
-      INSERT INTO users (id, username, avatar, role, status) 
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO users (id, username, password, avatar, role, status, created_by) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `),
     
     getAll: db.prepare(`
-      SELECT * FROM users ORDER BY joined_at DESC
+      SELECT id, username, avatar, status, role, created_by, joined_at, last_active 
+      FROM users 
+      ORDER BY joined_at DESC
     `),
     
     getById: db.prepare(`
-      SELECT * FROM users WHERE id = ?
+      SELECT id, username, avatar, status, role, created_by, joined_at, last_active 
+      FROM users 
+      WHERE id = ?
+    `),
+    
+    getByUsername: db.prepare(`
+      SELECT * FROM users WHERE username = ?
+    `),
+    
+    authenticate: db.prepare(`
+      SELECT id, username, avatar, status, role 
+      FROM users 
+      WHERE username = ? AND password = ? AND status = 'active'
     `),
     
     updateStatus: db.prepare(`
@@ -143,6 +167,10 @@ module.exports = {
       UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE id = ?
     `),
     
+    updatePassword: db.prepare(`
+      UPDATE users SET password = ? WHERE id = ?
+    `),
+    
     delete: db.prepare(`
       DELETE FROM users WHERE id = ?
     `),
@@ -151,7 +179,7 @@ module.exports = {
   // Group queries
   groups: {
     create: db.prepare(`
-      INSERT INTO groups (id, name, created_by) VALUES (?, ?, ?)
+      INSERT INTO groups (id, name, created_by, status) VALUES (?, ?, ?, 'active')
     `),
     
     getAll: db.prepare(`
@@ -191,8 +219,8 @@ module.exports = {
   // Message queries
   messages: {
     create: db.prepare(`
-      INSERT INTO messages (sender_id, sender_name, room_id, content, type, file_name, file_size, file_data, language)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO messages (sender_id, sender_name, room_id, room_type, content, type, file_name, file_size, file_data, language)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `),
     
     getByRoom: db.prepare(`
@@ -210,6 +238,23 @@ module.exports = {
     
     delete: db.prepare(`
       DELETE FROM messages WHERE id = ?
+    `),
+    
+    getPrivateChats: db.prepare(`
+      SELECT DISTINCT 
+        CASE 
+          WHEN sender_id = ? THEN 
+            SUBSTR(room_id, INSTR(room_id, '-') + 1)
+          ELSE 
+            SUBSTR(room_id, 1, INSTR(room_id, '-') - 1)
+        END as other_user_id,
+        room_id,
+        MAX(created_at) as last_message_time
+      FROM messages
+      WHERE room_type = 'private' 
+        AND (sender_id = ? OR room_id LIKE ? || '-%' OR room_id LIKE '%-' || ?)
+      GROUP BY room_id
+      ORDER BY last_message_time DESC
     `),
   },
 

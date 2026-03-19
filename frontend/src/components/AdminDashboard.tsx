@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Shield, Settings, Activity, LogOut, Search, Plus, Ban, Trash2, Edit } from 'lucide-react';
+import { Users, Shield, Settings, Activity, LogOut, Search, Plus, Ban, Trash2, Edit, Key } from 'lucide-react';
 import { Socket } from 'socket.io-client';
+import AddUserModal from './AddUserModal';
+import AddGroupModal from './AddGroupModal';
 
 interface User {
   id: string;
@@ -14,10 +16,19 @@ interface User {
 interface Group {
   id: string;
   name: string;
-  members: string[];
+  member_count: number;
   status: 'active' | 'suspended';
-  createdAt: string;
-  createdBy: string;
+  created_at: string;
+  created_by: string;
+}
+
+interface ActivityLog {
+  id: number;
+  user_id: string;
+  username: string;
+  action: string;
+  details: string;
+  created_at: string;
 }
 
 interface AdminDashboardProps {
@@ -29,14 +40,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ socket, onLogout }) => 
   const [activeTab, setActiveTab] = useState<'users' | 'groups' | 'settings' | 'logs'>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showAddGroupModal, setShowAddGroupModal] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
 
   useEffect(() => {
     if (socket) {
       socket.emit('admin:get-users');
       socket.emit('admin:get-groups');
+      socket.emit('admin:get-logs');
 
       socket.on('admin:users-list', (usersList: User[]) => {
         setUsers(usersList);
@@ -45,8 +60,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ socket, onLogout }) => 
       socket.on('admin:groups-list', (groupsList: Group[]) => {
         setGroups(groupsList);
       });
+
+      socket.on('admin:logs-list', (logsList: ActivityLog[]) => {
+        setLogs(logsList);
+      });
+
+      return () => {
+        socket.off('admin:users-list');
+        socket.off('admin:groups-list');
+        socket.off('admin:logs-list');
+      };
     }
   }, [socket]);
+
+  const handleUpdatePassword = (userId: string) => {
+    if (!newPassword.trim() || newPassword.length < 4) {
+      alert('Password must be at least 4 characters');
+      return;
+    }
+    socket?.emit('admin:update-password', { userId, newPassword });
+    socket?.once('admin:update-password-success', () => {
+      alert('Password updated successfully');
+      setEditingUserId(null);
+      setNewPassword('');
+    });
+  };
 
   const handleSuspendUser = (userId: string) => {
     socket?.emit('admin:suspend-user', { userId });
@@ -195,26 +233,62 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ socket, onLogout }) => 
                         )}
                       </div>
                       <p className="text-xs text-gray-400">
-                        Joined: {new Date(user.joinedAt).toLocaleDateString()} • 
-                        Last active: {new Date(user.lastActive).toLocaleString()}
+                        Joined: {new Date(user.joinedAt || user.joined_at).toLocaleDateString()} • 
+                        Last active: {new Date(user.lastActive || user.last_active).toLocaleString()}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleSuspendUser(user.id)}
-                      className="p-2 hover:bg-warning/10 rounded-lg text-warning transition-colors"
-                      title="Suspend User"
-                    >
-                      <Ban size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUser(user.id)}
-                      className="p-2 hover:bg-error/10 rounded-lg text-error transition-colors"
-                      title="Delete User"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    {editingUserId === user.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="New password"
+                          className="px-3 py-1 bg-dark-card border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+                        />
+                        <button
+                          onClick={() => handleUpdatePassword(user.id)}
+                          className="px-3 py-1 bg-primary hover:bg-primary-dark rounded-lg text-white text-sm transition-colors"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingUserId(null);
+                            setNewPassword('');
+                          }}
+                          className="px-3 py-1 bg-dark-card hover:bg-dark-hover rounded-lg text-white text-sm transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setEditingUserId(user.id)}
+                          className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors"
+                          title="Change Password"
+                        >
+                          <Key size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleSuspendUser(user.id)}
+                          className="p-2 hover:bg-warning/10 rounded-lg text-warning transition-colors"
+                          title="Suspend User"
+                        >
+                          <Ban size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="p-2 hover:bg-error/10 rounded-lg text-error transition-colors"
+                          title="Delete User"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -239,7 +313,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ socket, onLogout }) => 
                         </span>
                       </div>
                       <p className="text-xs text-gray-400">
-                        {group.members.length} members • Created: {new Date(group.createdAt).toLocaleDateString()}
+                        {group.member_count} members • Created: {new Date(group.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -322,20 +396,41 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ socket, onLogout }) => 
             <div className="glass p-6 rounded-xl">
               <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
               <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors">
-                    <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
-                    <div className="flex-1">
-                      <p className="text-sm text-white">User joined the network</p>
-                      <p className="text-xs text-gray-400">2 minutes ago</p>
+                {logs.length > 0 ? (
+                  logs.map((log) => (
+                    <div key={log.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors">
+                      <div className={`w-2 h-2 rounded-full mt-2 ${
+                        log.action.includes('login') ? 'bg-success' :
+                        log.action.includes('delete') || log.action.includes('suspend') ? 'bg-error' :
+                        log.action.includes('create') ? 'bg-primary' :
+                        'bg-gray-400'
+                      }`}></div>
+                      <div className="flex-1">
+                        <p className="text-sm text-white">
+                          <span className="font-medium">{log.username || 'System'}</span> - {log.details}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(log.created_at).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-gray-400 text-center py-4">No activity logs yet</p>
+                )}
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {showAddUserModal && (
+        <AddUserModal socket={socket} onClose={() => setShowAddUserModal(false)} />
+      )}
+
+      {showAddGroupModal && (
+        <AddGroupModal socket={socket} onClose={() => setShowAddGroupModal(false)} />
+      )}
     </div>
   );
 };
