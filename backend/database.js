@@ -237,7 +237,7 @@ module.exports = {
     `),
     
     delete: db.prepare(`
-      DELETE FROM messages WHERE id = ?
+      UPDATE messages SET content = '', type = 'text', file_name = NULL, file_size = NULL, file_data = NULL, language = NULL WHERE id = ?
     `),
     
     getPrivateChats: db.prepare(`

@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Smile, Mic, Phone, Video, MoreVertical, FileText, Users, Download } from 'lucide-react';
+import { Send, Paperclip, Smile, Mic, Phone, Video, MoreVertical, FileText, Users, Download, Copy, Forward, Trash2 } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import ConfirmModal from './ConfirmModal';
 
 interface Message {
   id: number;
@@ -13,6 +14,7 @@ interface Message {
   fileName?: string;
   fileSize?: number;
   language?: string;
+  isDeleted?: boolean;
 }
 
 interface ChatAreaProps {
@@ -24,6 +26,7 @@ interface ChatAreaProps {
   onSendFile: (file: File) => void;
   onTyping: (isTyping: boolean) => void;
   onToggleInfo: () => void;
+  onDeleteMessage?: (messageId: number) => void;
 }
 
 const ChatArea: React.FC<ChatAreaProps> = ({
@@ -35,15 +38,77 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   onSendFile,
   onTyping,
   onToggleInfo,
+  onDeleteMessage,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isCodeMode, setIsCodeMode] = useState(false);
+  const [hoveredMessageId, setHoveredMessageId] = useState<number | null>(null);
+  const [selectedMessageId, setSelectedMessageId] = useState<number | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setSelectedMessageId(null);
+        setMenuPosition(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleMessageClick = (e: React.MouseEvent, messageId: number) => {
+    e.preventDefault();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setSelectedMessageId(messageId);
+    setMenuPosition({
+      x: rect.right - 150,
+      y: rect.top
+    });
+  };
+
+  const handleCopyMessage = (content: string) => {
+    navigator.clipboard.writeText(content);
+    setSelectedMessageId(null);
+    setMenuPosition(null);
+  };
+
+  const handleForwardMessage = (message: Message) => {
+    // TODO: Implement forward functionality
+    console.log('Forward message:', message);
+    setSelectedMessageId(null);
+    setMenuPosition(null);
+  };
+
+  const handleDeleteMessage = (messageId: number) => {
+    setMessageToDelete(messageId);
+    setShowDeleteConfirm(true);
+    setSelectedMessageId(null);
+    setMenuPosition(null);
+  };
+
+  const confirmDelete = () => {
+    if (messageToDelete) {
+      onDeleteMessage?.(messageToDelete);
+    }
+    setShowDeleteConfirm(false);
+    setMessageToDelete(null);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setMessageToDelete(null);
+  };
 
   const handleFileDownload = (fileData: string, fileName: string) => {
     try {
@@ -140,9 +205,31 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       <div className="flex-1 overflow-y-auto scrollbar-thin p-3 md:p-4 space-y-3 md:space-y-4">
         {messages.map((message) => {
           const isSent = message.senderId === currentUserId;
+          
+          if (message.isDeleted) {
+            return (
+              <div key={message.id} className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
+                <div className="max-w-[85%] md:max-w-2xl">
+                  <div className="glass p-3 rounded-xl border border-white/10 opacity-60">
+                    <p className="text-xs md:text-sm text-gray-400 italic">🗑️ تم حذف الرسالة</p>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 px-1">{formatTime(message.timestamp)}</p>
+                </div>
+              </div>
+            );
+          }
+          
           return (
-            <div key={message.id} className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
-              <div className={`flex gap-2 max-w-[85%] md:max-w-2xl ${isSent ? 'flex-row-reverse' : 'flex-row'}`}>
+            <div 
+              key={message.id} 
+              className={`flex ${isSent ? 'justify-end' : 'justify-start'} group relative`}
+              onMouseEnter={() => setHoveredMessageId(message.id)}
+              onMouseLeave={() => setHoveredMessageId(null)}
+            >
+              <div 
+                className={`flex gap-2 max-w-[85%] md:max-w-2xl ${isSent ? 'flex-row-reverse' : 'flex-row'} cursor-pointer`}
+                onClick={(e) => handleMessageClick(e, message.id)}
+              >
                 {!isSent && (
                   <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                     {message.senderName?.[0]?.toUpperCase() || 'U'}
@@ -169,13 +256,13 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                       </SyntaxHighlighter>
                     </div>
                   ) : message.type === 'file' ? (
-                    <div className={`glass p-3 md:p-4 rounded-xl border border-white/10 ${isSent ? 'message-sent' : ''}`}>
+                    <div className={`glass p-3 md:p-4 rounded-xl border border-white/10`}>
                       <div className="flex items-center gap-2 md:gap-3">
                         <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
                           <FileText size={16} className="text-primary md:w-5 md:h-5" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs md:text-sm font-medium truncate">{message.fileName}</p>
+                          <p className="text-xs md:text-sm font-medium text-white truncate">{message.fileName}</p>
                           <p className="text-xs text-gray-400">{formatFileSize(message.fileSize)}</p>
                         </div>
                         <button
@@ -198,6 +285,56 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             </div>
           );
         })}
+        
+        {/* Context Menu */}
+        {selectedMessageId && menuPosition && (
+          <div
+            ref={menuRef}
+            className="fixed glass border border-white/20 rounded-xl shadow-2xl py-2 z-50 min-w-[150px]"
+            style={{
+              left: `${menuPosition.x}px`,
+              top: `${menuPosition.y}px`,
+            }}
+          >
+            {(() => {
+              const message = messages.find(m => m.id === selectedMessageId);
+              const isSent = message?.senderId === currentUserId;
+              
+              return (
+                <>
+                  {message?.type !== 'file' && (
+                    <button
+                      onClick={() => handleCopyMessage(message?.content || '')}
+                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-white/10 transition-colors text-left"
+                    >
+                      <Copy size={16} className="text-gray-400" />
+                      <span className="text-sm text-white">نسخ</span>
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => message && handleForwardMessage(message)}
+                    className="w-full flex items-center gap-3 px-4 py-2 hover:bg-white/10 transition-colors text-left"
+                  >
+                    <Forward size={16} className="text-gray-400" />
+                    <span className="text-sm text-white">إعادة توجيه</span>
+                  </button>
+                  
+                  {isSent && onDeleteMessage && (
+                    <button
+                      onClick={() => handleDeleteMessage(selectedMessageId)}
+                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-error/20 transition-colors text-left border-t border-white/10 mt-1 pt-2"
+                    >
+                      <Trash2 size={16} className="text-error" />
+                      <span className="text-sm text-error">حذف</span>
+                    </button>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
 
@@ -266,6 +403,18 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        title="حذف الرسالة"
+        message="هل أنت متأكد من حذف هذه الرسالة؟ لن تتمكن من استرجاعها."
+        confirmText="حذف"
+        cancelText="إلغاء"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        type="danger"
+      />
     </div>
   );
 };

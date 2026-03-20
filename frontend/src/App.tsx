@@ -25,6 +25,7 @@ interface Message {
   fileSize?: number;
   fileData?: string;
   language?: string;
+  isDeleted?: boolean;
 }
 
 interface Chat {
@@ -183,6 +184,15 @@ function App() {
       setPrivateChats(updateChatsList);
     });
 
+    newSocket.on('message-deleted', (data: { messageId: number; roomId: string }) => {
+      setMessages((prev) => ({
+        ...prev,
+        [data.roomId]: prev[data.roomId]?.map(msg => 
+          msg.id === data.messageId ? { ...msg, isDeleted: true } : msg
+        ) || []
+      }));
+    });
+
     newSocket.on('room-messages', (data) => {
       setMessages((prev) => ({
         ...prev,
@@ -280,6 +290,14 @@ function App() {
     socket.emit('typing', { roomId: activeChat, isTyping });
   };
 
+  const handleDeleteMessage = (messageId: number) => {
+    if (!socket || !activeChat) return;
+    
+    if (confirm('هل تريد حذف هذه الرسالة؟')) {
+      socket.emit('delete-message', { messageId, roomId: activeChat });
+    }
+  };
+
   const activeChatData = [...chats, ...privateChats].find((chat) => chat.id === activeChat);
   const activeMessages = activeChat ? messages[activeChat] || [] : [];
 
@@ -324,6 +342,7 @@ function App() {
         onSendFile={handleSendFile}
         onTyping={handleTyping}
         onToggleInfo={() => setShowInfoPanel(!showInfoPanel)}
+        onDeleteMessage={handleDeleteMessage}
       />
 
       <InfoPanel

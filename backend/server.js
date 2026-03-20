@@ -444,7 +444,8 @@ io.on('connection', (socket) => {
         fileSize: msg.file_size,
         fileData: msg.file_data,
         language: msg.language,
-        timestamp: msg.created_at
+        timestamp: msg.created_at,
+        isDeleted: !msg.content && !msg.file_name
       }));
       
       socket.emit('room-messages', { roomId, messages });
@@ -544,6 +545,26 @@ io.on('connection', (socket) => {
       username: onlineUsers.get(socket.id)?.username,
       isTyping: data.isTyping
     });
+  });
+
+  socket.on('delete-message', (data) => {
+    try {
+      const { messageId, roomId } = data;
+      const user = onlineUsers.get(socket.id);
+      
+      console.log('🗑️ Delete message:', messageId, 'in room:', roomId, 'by:', user?.username);
+      
+      // Update message in database (mark as deleted)
+      messageQueries.delete.run(messageId);
+      
+      // Notify all users in the room
+      io.to(roomId).emit('message-deleted', { messageId, roomId });
+      
+      logQueries.create.run(user?.id || socket.id, 'delete_message', `Deleted message ${messageId}`);
+      console.log('✅ Message deleted successfully');
+    } catch (error) {
+      console.error('❌ Delete message error:', error);
+    }
   });
 
   socket.on('get-groups', () => {
