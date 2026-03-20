@@ -131,32 +131,29 @@ function App() {
     });
 
     newSocket.on('private-chat-started', (data: any) => {
-      console.log('✅ Private chat started:', data);
-      
-      // Find the other user's info
-      const otherUser = users.find(u => u.id === data.otherUserId);
-      
+      // Request user info from backend to add to sidebar
+      newSocket.emit('get-user-info', { userId: data.otherUserId });
+    });
+
+    newSocket.on('user-info', (userData: any) => {
       // Add to private chats list if not exists
       setPrivateChats(prev => {
-        const exists = prev.find(chat => chat.id === data.roomId);
-        if (!exists && otherUser) {
+        const roomId = [currentUser?.id, userData.id].filter(Boolean).sort().join('-');
+        const exists = prev.find(chat => chat.id === roomId);
+        
+        if (!exists) {
           return [{
-            id: data.roomId,
-            name: otherUser.username,
-            avatar: otherUser.avatar || '',
+            id: roomId,
+            name: userData.username,
+            avatar: userData.avatar || '',
             lastMessage: 'Start chatting',
             timestamp: 'Now',
             isGroup: false,
-            isOnline: otherUser.status === 'online'
+            isOnline: userData.status === 'online'
           }, ...prev];
         }
         return prev;
       });
-      
-      // Set as active chat
-      setActiveChat(data.roomId);
-      setActiveChatType('private');
-      newSocket.emit('join-room', data.roomId);
     });
 
     newSocket.on('receive-message', (message: Message) => {
@@ -218,23 +215,19 @@ function App() {
   };
 
   const handleStartPrivateChat = (userId: string) => {
-    console.log('🔵 Starting private chat with:', userId);
     if (socket && currentUser) {
       const roomId = [currentUser.id, userId].sort().join('-');
-      console.log('🔵 Room ID:', roomId);
       
-      // Check if chat already exists
+      // Always set as active chat
+      setActiveChat(roomId);
+      setActiveChatType('private');
+      socket.emit('join-room', roomId);
+      
+      // Check if chat already exists in list
       const existingChat = privateChats.find(chat => chat.id === roomId);
-      console.log('🔵 Existing chat:', existingChat);
       
-      if (existingChat) {
-        console.log('✅ Chat exists, opening...');
-        setActiveChat(roomId);
-        setActiveChatType('private');
-        socket.emit('join-room', roomId);
-      } else {
-        console.log('✅ Starting new chat...');
-        // Start new private chat
+      if (!existingChat) {
+        // Start new private chat and request user info
         socket.emit('start-private-chat', { userId1: currentUser.id, userId2: userId });
       }
     }

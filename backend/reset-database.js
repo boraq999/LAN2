@@ -36,13 +36,23 @@ try {
   insertSetting.run('max_file_size', '50');
   console.log('✅ Default settings created');
   
-  // Create admin user
-  const insertAdmin = db.prepare(`
+  // Create users
+  const insertUser = db.prepare(`
     INSERT INTO users (id, username, password, role, status, created_by, joined_at, last_active) 
-    VALUES ('admin', 'admin', ?, 'admin', 'active', 'system', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    VALUES (?, ?, ?, ?, 'active', 'system', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `);
-  insertAdmin.run(hashPassword('admin123'));
+  
+  insertUser.run('admin', 'admin', hashPassword('1234'), 'admin');
   console.log('✅ Admin user created');
+  
+  insertUser.run('hareth', 'hareth', hashPassword('1234'), 'user');
+  console.log('✅ Hareth user created');
+  
+  insertUser.run('hammam', 'hammam', hashPassword('1234'), 'user');
+  console.log('✅ Hammam user created');
+  
+  insertUser.run('omar', 'omar', hashPassword('1234'), 'user');
+  console.log('✅ Omar user created');
   
   // Create default group
   const insertGroup = db.prepare(`
@@ -57,9 +67,11 @@ try {
   console.log('\n' + '='.repeat(50));
   console.log('✅ Database reset successfully!');
   console.log('='.repeat(50));
-  console.log('\nDefault credentials:');
-  console.log('  Username: admin');
-  console.log('  Password: admin123');
+  console.log('\nDefault users:');
+  console.log('  admin  / 1234');
+  console.log('  hareth / 1234');
+  console.log('  hammam / 1234');
+  console.log('  omar   / 1234');
   console.log('\n✅ You can now start the server!');
   
 } catch (error) {

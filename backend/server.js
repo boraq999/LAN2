@@ -576,6 +576,29 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('get-user-info', (data) => {
+    try {
+      const { userId } = data;
+      console.log('📥 Get user info request for:', userId);
+      
+      const user = userQueries.getById.get(userId);
+      
+      if (user) {
+        console.log('✅ User found:', user.username);
+        socket.emit('user-info', {
+          id: user.id,
+          username: user.username,
+          avatar: user.avatar,
+          status: user.status
+        });
+      } else {
+        console.log('❌ User not found:', userId);
+      }
+    } catch (error) {
+      console.error('Get user info error:', error);
+    }
+  });
+
   socket.on('get-group-members', (data) => {
     try {
       const members = groupQueries.getMembers.all(data.groupId);

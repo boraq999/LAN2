@@ -38,7 +38,12 @@ const Sidebar: React.FC<SidebarProps> = ({ chats, activeChat, onChatSelect, curr
   const privateChats = chats.filter(chat => !chat.isGroup);
 
   // Filter online users (exclude current user and users already in private chats)
-  const privateChatUserIds = privateChats.map(chat => chat.id);
+  const privateChatUserIds = privateChats.map(chat => {
+    // Extract user IDs from room ID (format: "userId1-userId2")
+    const ids = chat.id.split('-');
+    return ids.find(id => id !== currentUser?.id) || '';
+  }).filter(Boolean);
+  
   const availableUsers = onlineUsers.filter(
     user => user.id !== currentUser?.id && !privateChatUserIds.includes(user.id)
   );
@@ -194,10 +199,7 @@ const Sidebar: React.FC<SidebarProps> = ({ chats, activeChat, onChatSelect, curr
                   {availableUsers.map((user) => (
                     <button
                       key={user.id}
-                      onClick={() => {
-                        console.log('👆 Clicked on user:', user.username, '- ID:', user.id);
-                        onStartPrivateChat?.(user.id);
-                      }}
+                      onClick={() => onStartPrivateChat?.(user.id)}
                       className="w-full p-2 rounded-lg flex items-center gap-3 hover:bg-white/5 transition-all"
                     >
                       <div className="relative">
