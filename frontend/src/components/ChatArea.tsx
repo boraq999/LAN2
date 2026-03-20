@@ -3,6 +3,7 @@ import { Send, Paperclip, Smile, Mic, Phone, Video, MoreVertical, FileText, User
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import ConfirmModal from './ConfirmModal';
+import ForwardModal from './ForwardModal';
 
 interface Message {
   id: number;
@@ -27,6 +28,7 @@ interface ChatAreaProps {
   onTyping: (isTyping: boolean) => void;
   onToggleInfo: () => void;
   onDeleteMessage?: (messageId: number) => void;
+  allChats?: Array<{ id: string; name: string; isGroup?: boolean; isOnline?: boolean }>;
 }
 
 const ChatArea: React.FC<ChatAreaProps> = ({
@@ -39,6 +41,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   onTyping,
   onToggleInfo,
   onDeleteMessage,
+  allChats = [],
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isCodeMode, setIsCodeMode] = useState(false);
@@ -47,6 +50,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<number | null>(null);
+  const [showForwardModal, setShowForwardModal] = useState(false);
+  const [messageToForward, setMessageToForward] = useState<Message | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -84,10 +89,31 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   };
 
   const handleForwardMessage = (message: Message) => {
-    // TODO: Implement forward functionality
-    console.log('Forward message:', message);
+    setMessageToForward(message);
+    setShowForwardModal(true);
     setSelectedMessageId(null);
     setMenuPosition(null);
+  };
+
+  const handleForwardConfirm = (chatIds: string[]) => {
+    if (messageToForward) {
+      chatIds.forEach(chatId => {
+        if (messageToForward.type === 'file') {
+          // Forward file
+          onSendMessage(`📎 ${messageToForward.fileName}`, 'file');
+        } else {
+          // Forward text/code
+          onSendMessage(messageToForward.content, messageToForward.type);
+        }
+      });
+    }
+    setShowForwardModal(false);
+    setMessageToForward(null);
+  };
+
+  const handleForwardCancel = () => {
+    setShowForwardModal(false);
+    setMessageToForward(null);
   };
 
   const handleDeleteMessage = (messageId: number) => {
@@ -414,6 +440,15 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
         type="danger"
+      />
+
+      {/* Forward Modal */}
+      <ForwardModal
+        isOpen={showForwardModal}
+        message={messageToForward}
+        chats={allChats.filter(chat => chat.id !== chatId)}
+        onForward={handleForwardConfirm}
+        onCancel={handleForwardCancel}
       />
     </div>
   );

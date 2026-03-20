@@ -343,6 +343,7 @@ function App() {
         onTyping={handleTyping}
         onToggleInfo={() => setShowInfoPanel(!showInfoPanel)}
         onDeleteMessage={handleDeleteMessage}
+        allChats={allChats}
       />
 
       <InfoPanel
